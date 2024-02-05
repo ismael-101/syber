@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>Syber</title>
-    
   </head>
 
   <body>
@@ -43,13 +42,13 @@
     </style>
     <div class="container">
       <img
-        src="./Strawberry.png"
+        src="./images/Strawberry.png"
         width="100"
         alt="Strawberry"
         class="strawberry"
       />
       <img
-        src="./syber1.png"
+        src="./images/syber1.png"
         width="150"
         alt="Angry Syber"
         class="angrySyber"
@@ -108,12 +107,12 @@
           syberRect.bottom > strawberryRect.top
         ) {
           strawberryHit = true;
-          angrySyber.src = "http://127.0.0.1:5501/syber2.png";
+          angrySyber.src = "./images/syber2.png";
           angrySyber.style.width = "180px";
           setTimeout(randomPlace(), 6000);
         } else {
           strawberryHit = false;
-          angrySyber.src = "http://127.0.0.1:5501/syber1.png";
+          angrySyber.src = "./images/syber1.png";
         }
         console.log(strawberryHit);
       }

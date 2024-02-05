@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Syber</title>
+    
+  </head>
+
+  <body>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        width: 100vw;
+        height: 100vh;
+        align-items: center;
+        justify-content: center;
+        display: flex;
+      }
+      .angrySyber {
+        --x: 0px;
+        --y: 0px;
+        --flippY: 0;
+        --flippX: 0;
+        transform: translateX(var(--x)) translateY(var(--y))
+          rotateY(var(--flippX)) rotate(var(--flippY));
+        transition: transform 0.2s;
+      }
+      .container {
+        position: relative;
+        width: 70vw;
+        height: 80vh;
+        background: #cf6868;
+        border-radius: 1.5rem;
+      }
+      .strawberry {
+        position: absolute;
+      }
+    </style>
+    <div class="container">
+      <img
+        src="./Strawberry.png"
+        width="100"
+        alt="Strawberry"
+        class="strawberry"
+      />
+      <img
+        src="./syber1.png"
+        width="150"
+        alt="Angry Syber"
+        class="angrySyber"
+      />
+    </div>
+
+    <script>
+      const angrySyber = document.querySelector(".angrySyber");
+      const Strawberry = document.querySelector(".strawberry");
+      const Container = document.querySelector(".container");
+
+      let x = 0;
+      let y = 0;
+      const speed = 50;
+      let flippedY = 0;
+      let flippedX = false;
+      const validKeys = [
+        "ArrowUp",
+        "ArrowDown",
+        "ArrowLeft",
+        "ArrowRight",
+        "q",
+        "w",
+        "e",
+        "a",
+        "s",
+        "d",
+        "z",
+        "c",
+      ];
+      let strawberryHit = false;
+
+      function randomPlace() {
+        let i = Math.floor(Math.random() * Container.clientWidth);
+        let j = Math.floor(Math.random() * Container.clientHeight - 100);
+        strawberryXY(j, i);
+      }
+      function strawberryXY(j, i) {
+        Strawberry.setAttribute(
+          "style",
+          `top: ${j}px;
+          left: ${i}px;
+          `
+        );
+      }
+
+      function checkCollision() {
+        const syberRect = angrySyber.getBoundingClientRect();
+        const strawberryRect = Strawberry.getBoundingClientRect();
+        console.log("1", syberRect);
+        console.log("2", strawberryRect);
+        if (
+          syberRect.left < strawberryRect.right &&
+          syberRect.right > strawberryRect.left &&
+          syberRect.top < strawberryRect.bottom &&
+          syberRect.bottom > strawberryRect.top
+        ) {
+          strawberryHit = true;
+          angrySyber.src = "http://127.0.0.1:5501/syber2.png";
+          angrySyber.style.width = "180px";
+          setTimeout(randomPlace(), 6000);
+        } else {
+          strawberryHit = false;
+          angrySyber.src = "http://127.0.0.1:5501/syber1.png";
+        }
+        console.log(strawberryHit);
+      }
+
+      function handleKeyDown(e) {
+        if (!validKeys.includes(e.key)) return;
+        switch (e.key) {
+          case "ArrowUp":
+          case "w":
+            y = y - 1;
+            flippedY = 90;
+            break;
+          case "ArrowDown":
+          case "s":
+            y = y + 1;
+            flippedY = -90;
+            break;
+          case "ArrowLeft":
+          case "a":
+            x = x - 1;
+            flippedX = true;
+            flippedY = 0;
+            break;
+          case "ArrowRight":
+          case "d":
+            x = x + 1;
+            flippedX = false;
+            flippedY = 0;
+            break;
+          //angles
+          case "q":
+            y = y - 1;
+            x = x - 1;
+            flippedX = true;
+            flippedY = 30;
+            break;
+          case "e":
+            y = y - 1;
+            x = x + 1;
+            flippedX = false;
+            flippedY = 30;
+            break;
+          case "z":
+            y = y + 1;
+            x = x - 1;
+            flippedX = true;
+            flippedY = -50;
+            break;
+          case "c":
+            y = y + 1;
+            x = x + 1;
+            flippedX = false;
+            flippedY = -50;
+            break;
+          default:
+            break;
+        }
+
+        angrySyber.setAttribute(
+          "style",
+          `--x: ${x * speed}px;
+          --y: ${y * speed}px;
+          --flippX: ${flippedX ? "0" : "180deg"};
+          --flippY: ${flippedY}deg;
+          
+          `
+        );
+        checkCollision();
+      }
+      // strawberryXY();
+      randomPlace();
+
+      window.addEventListener("keydown", handleKeyDown);
+    </script>
+  </body>
+</html>

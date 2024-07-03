@@ -40,25 +40,32 @@
         position: absolute;
       }
     </style>
-    <div class="container">
-      <img
-        src="./images/Strawberry.png"
-        width="100"
-        alt="Strawberry"
-        class="strawberry"
-      />
-      <img
-        src="./images/syber1.png"
-        width="150"
-        alt="Angry Syber"
-        class="angrySyber"
-      />
+    <div class="wrapper">
+      <div class="container">
+        <img
+          src="./images/Strawberry.png"
+          width="100"
+          alt="Strawberry"
+          class="strawberry"
+        />
+        <img
+          src="./images/syber1.png"
+          width="150"
+          alt="Angry Syber"
+          class="angrySyber"
+        />
+      </div>
+      <div>
+        <h1 id="score"></h1>
+      </div>
     </div>
-
     <script>
       const angrySyber = document.querySelector(".angrySyber");
       const Strawberry = document.querySelector(".strawberry");
       const Container = document.querySelector(".container");
+      const Score = document.querySelector("#score");
+
+      let score = 0;
 
       let x = 0;
       let y = 0;
@@ -98,14 +105,17 @@
       function checkCollision() {
         const syberRect = angrySyber.getBoundingClientRect();
         const strawberryRect = Strawberry.getBoundingClientRect();
-        console.log("1", syberRect);
-        console.log("2", strawberryRect);
+
         if (
           syberRect.left < strawberryRect.right &&
           syberRect.right > strawberryRect.left &&
           syberRect.top < strawberryRect.bottom &&
           syberRect.bottom > strawberryRect.top
         ) {
+          score++;
+          Score.textContent = `Score: ${score}`;
+
+          console.log(score);
           strawberryHit = true;
           angrySyber.src = "./images/syber2.png";
           angrySyber.style.width = "180px";
@@ -114,7 +124,6 @@
           strawberryHit = false;
           angrySyber.src = "./images/syber1.png";
         }
-        console.log(strawberryHit);
       }
 
       function handleKeyDown(e) {

@@ -19,6 +19,7 @@
         align-items: center;
         justify-content: center;
         display: flex;
+        background: linear-gradient(180deg, #2c1810 0%, #1a0f0a 100%);
       }
       .angrySyber {
         --x: 0px;
@@ -27,21 +28,138 @@
         --flippX: 0;
         transform: translateX(var(--x)) translateY(var(--y))
           rotateY(var(--flippX)) rotate(var(--flippY));
-        transition: transform 0.2s;
       }
       .container {
         position: relative;
-        width: 70vw;
-        height: 80vh;
-        background: #cf6868;
+        width: 1200px;
+        height: 800px;
+        max-width: 98vw;
+        max-height: 90vh;
+        background:
+          radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+          radial-gradient(circle at 80% 70%, rgba(255, 200, 200, 0.15) 0%, transparent 50%),
+          linear-gradient(135deg, #e85d75 0%, #8b4545 50%, #5a2d2d 100%);
         border-radius: 1.5rem;
+        box-shadow: 0 15px 60px rgba(0,0,0,0.4), inset 0 0 100px rgba(0,0,0,0.1);
+        overflow: hidden;
+        border: 3px solid rgba(255, 255, 255, 0.1);
       }
       .strawberry {
         position: absolute;
+        filter: drop-shadow(0 5px 10px rgba(0,0,0,0.3));
+        z-index: 1;
+        opacity: 1;
+        transition: opacity 0.2s ease;
+      }
+      .strawberry.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .bomb {
+        position: absolute;
+        transition: all 0.3s ease;
+        filter: drop-shadow(0 5px 10px rgba(0,0,0,0.3));
+        z-index: 1;
+      }
+      .powerup {
+        position: absolute;
+        transition: all 0.3s ease;
+        filter: drop-shadow(0 5px 10px rgba(0,0,0,0.3));
+        z-index: 1;
+        font-size: 50px;
+      }
+      .combo-indicator {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        font-family: 'Comic Sans MS', cursive;
+        font-size: 2rem;
+        color: #fff;
+        background: rgba(0,0,0,0.5);
+        padding: 0.5rem 1rem;
+        border-radius: 10px;
+        display: none;
+      }
+      .trail {
+        position: absolute;
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 0;
+        animation: fade-trail 0.5s ease-out forwards;
+      }
+      @keyframes fade-trail {
+        0% { opacity: 0.6; transform: scale(1); }
+        100% { opacity: 0; transform: scale(0.3); }
+      }
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+        20%, 40%, 60%, 80% { transform: translateX(5px); }
+      }
+      @keyframes bounce-in {
+        0% { transform: translate(-50%, -50%) scale(0); }
+        50% { transform: translate(-50%, -50%) scale(1.2); }
+        100% { transform: translate(-50%, -50%) scale(1); }
+      }
+      @keyframes fade-out {
+        0% { opacity: 1; }
+        100% { opacity: 0; }
+      }
+      .obstacle {
+        position: absolute;
+        z-index: 1;
+        font-size: 40px;
+        transition: transform 0.1s ease;
+      }
+      .fruit {
+        position: absolute;
+        filter: drop-shadow(0 5px 10px rgba(0,0,0,0.3));
+        z-index: 1;
+        opacity: 1;
+        transition: opacity 0.2s ease;
+        font-size: 70px;
+      }
+      .fruit.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      @media (max-width: 768px) {
+        .angrySyber {
+          width: 100px !important;
+        }
+        .container {
+          touch-action: none;
+        }
+      }
+      #score {
+        font-family: 'Comic Sans MS', cursive, sans-serif;
+        font-size: 2rem;
+        color: #cf6868;
+        text-align: center;
+        margin-top: 1rem;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+      }
+      #timer {
+        font-family: 'Comic Sans MS', cursive, sans-serif;
+        font-size: 1.5rem;
+        color: #8b4545;
+        text-align: center;
+        margin-top: 0.5rem;
+      }
+      .particle {
+        position: absolute;
+        pointer-events: none;
+        font-size: 2rem;
+        animation: float-up 1s ease-out forwards;
+      }
+      @keyframes float-up {
+        0% { opacity: 1; transform: translateY(0) scale(1); }
+        100% { opacity: 0; transform: translateY(-100px) scale(1.5); }
       }
     </style>
     <div class="wrapper">
       <div class="container">
+        <div id="combo" class="combo-indicator">Combo x1</div>
         <img
           src="./images/Strawberry.png"
           width="100"
@@ -56,22 +174,57 @@
         />
       </div>
       <div>
-        <h1 id="score"></h1>
+        <h1 id="score">Score: 0</h1>
+        <h2 id="timer">Time: 60s</h2>
+        <h3 id="highscore" style="font-family: 'Comic Sans MS', cursive, sans-serif; font-size: 1.2rem; color: #666; text-align: center;">High Score: 0</h3>
       </div>
     </div>
+
     <script>
       const angrySyber = document.querySelector(".angrySyber");
       const Strawberry = document.querySelector(".strawberry");
       const Container = document.querySelector(".container");
       const Score = document.querySelector("#score");
+      const Timer = document.querySelector("#timer");
+      const HighScore = document.querySelector("#highscore");
+      const ComboDisplay = document.querySelector("#combo");
 
       let score = 0;
+      let highScore = parseInt(localStorage.getItem('syberHighScore')) || 0;
+      let timeLeft = 60;
+      let gameRunning = true;
+      let bombs = [];
+      let powerups = [];
+      let obstacles = [];
+      let fruits = [];
+      let combo = 0;
+      let comboTimer = null;
+      let speedBoost = false;
+      let invincible = false;
+      let rainbowTrail = false;
+      let magnetActive = false;
+      const colors = ['#ff0000', '#ff7700', '#ffdd00', '#00ff00', '#0088ff', '#8800ff', '#ff00ff'];
+      let colorIndex = 0;
+      const funnyMessages = ['Wow! 😮', 'Amazing! ⭐', 'On Fire! 🔥', 'Unstoppable! 💪', 'Nice! 👍', 'Keep Going! 🚀', 'Beast Mode! 🦁'];
+      let lastMilestone = 0;
+
+      HighScore.textContent = `High Score: ${highScore}`;
 
       let x = 0;
       let y = 0;
-      const speed = 50;
+      let baseSpeed = 5;
+      let speed = baseSpeed;
       let flippedY = 0;
       let flippedX = false;
+      let directionX = 0;
+      let directionY = 0;
+      let frameCount = 0;
+
+      // Swipe detection
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let touchEndX = 0;
+      let touchEndY = 0;
       const validKeys = [
         "ArrowUp",
         "ArrowDown",
@@ -87,12 +240,23 @@
         "c",
       ];
       let strawberryHit = false;
+      let isStrawberryBeingEaten = false;
 
       function randomPlace() {
-        let i = Math.floor(Math.random() * Container.clientWidth);
-        let j = Math.floor(Math.random() * Container.clientHeight - 100);
+        // Ensure strawberry spawns inside the container with margin and away from Syber
+        let i, j, attempts = 0;
+        const minDistance = 250;
+        do {
+          i = Math.floor(Math.random() * (Container.clientWidth - 150)) + 25;
+          j = Math.floor(Math.random() * (Container.clientHeight - 150)) + 25;
+          const distance = Math.sqrt(Math.pow(i - x, 2) + Math.pow(j - y, 2));
+          attempts++;
+          if (distance > minDistance) break;
+        } while (attempts < 20);
+
         strawberryXY(j, i);
       }
+
       function strawberryXY(j, i) {
         Strawberry.setAttribute(
           "style",
@@ -102,7 +266,339 @@
         );
       }
 
+      function showMessage(text) {
+        const msg = document.createElement('div');
+        msg.textContent = text;
+        msg.style.position = 'absolute';
+        msg.style.top = '20%';
+        msg.style.left = '50%';
+        msg.style.transform = 'translate(-50%, -50%)';
+        msg.style.fontSize = '3rem';
+        msg.style.fontFamily = 'Comic Sans MS, cursive';
+        msg.style.fontWeight = 'bold';
+        msg.style.color = '#fff';
+        msg.style.textShadow = '0 0 10px #ff0, 0 0 20px #ff0, 0 0 30px #ff0';
+        msg.style.zIndex = '999';
+        msg.style.animation = 'bounce-in 0.5s ease-out';
+        Container.appendChild(msg);
+
+        setTimeout(() => {
+          msg.style.animation = 'fade-out 0.5s ease-out';
+          setTimeout(() => msg.remove(), 500);
+        }, 1500);
+      }
+
+      function createFirework(x, y) {
+        const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
+        for (let i = 0; i < 12; i++) {
+          const particle = document.createElement('div');
+          particle.style.position = 'absolute';
+          particle.style.left = x + 'px';
+          particle.style.top = y + 'px';
+          particle.style.width = '8px';
+          particle.style.height = '8px';
+          particle.style.borderRadius = '50%';
+          particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+          particle.style.pointerEvents = 'none';
+          particle.style.zIndex = '10';
+
+          const angle = (i / 12) * Math.PI * 2;
+          const velocity = 100 + Math.random() * 50;
+          const vx = Math.cos(angle) * velocity;
+          const vy = Math.sin(angle) * velocity;
+
+          Container.appendChild(particle);
+
+          let px = x, py = y;
+          let startTime = Date.now();
+          const animate = () => {
+            const elapsed = (Date.now() - startTime) / 1000;
+            px += vx * 0.016;
+            py += vy * 0.016;
+
+            particle.style.left = px + 'px';
+            particle.style.top = py + 'px';
+            particle.style.opacity = Math.max(0, 1 - elapsed * 2);
+
+            if (elapsed < 0.8) {
+              requestAnimationFrame(animate);
+            } else {
+              particle.remove();
+            }
+          };
+          animate();
+        }
+      }
+
+      function screenShake() {
+        Container.style.animation = 'shake 0.3s';
+        setTimeout(() => {
+          Container.style.animation = '';
+        }, 300);
+      }
+
+      function createBomb() {
+        const bomb = document.createElement('div');
+        bomb.textContent = '💣';
+        bomb.className = 'bomb';
+        bomb.style.fontSize = '60px';
+
+        const bombX = Math.floor(Math.random() * (Container.clientWidth - 100));
+        const bombY = Math.floor(Math.random() * (Container.clientHeight - 100));
+
+        bomb.style.left = bombX + 'px';
+        bomb.style.top = bombY + 'px';
+
+        Container.appendChild(bomb);
+        bombs.push({element: bomb, x: bombX, y: bombY});
+      }
+
+      function createObstacle() {
+        const obstacle = document.createElement('div');
+        obstacle.textContent = '🪨';
+        obstacle.className = 'obstacle';
+
+        const obstacleX = Math.floor(Math.random() * (Container.clientWidth - 100));
+        const obstacleY = Math.floor(Math.random() * (Container.clientHeight - 100));
+
+        obstacle.style.left = obstacleX + 'px';
+        obstacle.style.top = obstacleY + 'px';
+
+        Container.appendChild(obstacle);
+        obstacles.push({element: obstacle, x: obstacleX, y: obstacleY, hits: 0});
+      }
+
+      function spawnExtraFruit() {
+        const fruit = document.createElement('div');
+        const fruitTypes = [
+          {emoji: '🍒', points: 2, name: 'cherry'},
+          {emoji: '🍇', points: 3, name: 'grape'},
+          {emoji: '🍉', points: 5, name: 'watermelon'},
+          {emoji: '🍌', points: 1, name: 'banana'}
+        ];
+        const fruitType = fruitTypes[Math.floor(Math.random() * fruitTypes.length)];
+
+        fruit.textContent = fruitType.emoji;
+        fruit.className = 'fruit';
+        fruit.dataset.points = fruitType.points;
+
+        const fruitX = Math.floor(Math.random() * (Container.clientWidth - 100));
+        const fruitY = Math.floor(Math.random() * (Container.clientHeight - 100));
+
+        fruit.style.left = fruitX + 'px';
+        fruit.style.top = fruitY + 'px';
+
+        Container.appendChild(fruit);
+        fruits.push({element: fruit, x: fruitX, y: fruitY, points: fruitType.points});
+
+        // Remove after 7 seconds
+        setTimeout(() => {
+          const index = fruits.findIndex(f => f.element === fruit);
+          if (index !== -1) {
+            fruit.remove();
+            fruits.splice(index, 1);
+          }
+        }, 7000);
+      }
+
+      function checkExtraFruitCollision() {
+        const syberRect = angrySyber.getBoundingClientRect();
+
+        fruits.forEach((fruit, index) => {
+          const fruitRect = fruit.element.getBoundingClientRect();
+
+          if (
+            syberRect.left < fruitRect.right &&
+            syberRect.right > fruitRect.left &&
+            syberRect.top < fruitRect.bottom &&
+            syberRect.bottom > fruitRect.top
+          ) {
+            // Collect bonus fruit
+            const points = fruit.points;
+            score += points;
+            Score.textContent = `Score: ${score}`;
+
+            // Update high score
+            if (score > highScore) {
+              highScore = score;
+              localStorage.setItem('syberHighScore', highScore);
+              HighScore.textContent = `High Score: ${highScore}`;
+            }
+
+            const containerRect = Container.getBoundingClientRect();
+            const fruitScreenX = fruitRect.left - containerRect.left;
+            const fruitScreenY = fruitRect.top - containerRect.top;
+            createParticle(fruitScreenX, fruitScreenY, `+${points}`);
+            createParticle(fruitScreenX + 20, fruitScreenY, '✨');
+
+            // Different sound based on fruit value
+            const bonusPitch = 500 + (points * 100);
+            playSound(bonusPitch, 'sine', 0.2, 0.35);
+
+            fruit.element.remove();
+            fruits.splice(index, 1);
+          }
+        });
+      }
+
+      function createPowerup() {
+        const powerup = document.createElement('div');
+        const types = ['⚡', '🛡️', '⏰', '🌈', '🧲'];
+        const type = types[Math.floor(Math.random() * types.length)];
+        powerup.textContent = type;
+        powerup.className = 'powerup';
+        powerup.dataset.type = type;
+
+        const powerupX = Math.floor(Math.random() * (Container.clientWidth - 100));
+        const powerupY = Math.floor(Math.random() * (Container.clientHeight - 100));
+
+        powerup.style.left = powerupX + 'px';
+        powerup.style.top = powerupY + 'px';
+
+        Container.appendChild(powerup);
+        powerups.push({element: powerup, x: powerupX, y: powerupY, type: type});
+
+        // Remove after 10 seconds
+        setTimeout(() => {
+          const index = powerups.findIndex(p => p.element === powerup);
+          if (index !== -1) {
+            powerup.remove();
+            powerups.splice(index, 1);
+          }
+        }, 10000);
+      }
+
+      function checkPowerupCollision() {
+        const syberRect = angrySyber.getBoundingClientRect();
+
+        powerups.forEach((powerup, index) => {
+          const powerupRect = powerup.element.getBoundingClientRect();
+
+          if (
+            syberRect.left < powerupRect.right &&
+            syberRect.right > powerupRect.left &&
+            syberRect.top < powerupRect.bottom &&
+            syberRect.bottom > powerupRect.top
+          ) {
+            // Collect powerup
+            const containerRect = Container.getBoundingClientRect();
+            const powerupScreenX = powerupRect.left - containerRect.left;
+            const powerupScreenY = powerupRect.top - containerRect.top;
+            createParticle(powerupScreenX, powerupScreenY, '✨');
+
+            if (powerup.type === '⚡') {
+              // Speed boost
+              speedBoost = true;
+              speed = baseSpeed * 2;
+              playSound(600, 'triangle', 0.3, 0.4); // Electric zap sound
+              setTimeout(() => {
+                speedBoost = false;
+                speed = baseSpeed;
+              }, 5000);
+            } else if (powerup.type === '🛡️') {
+              // Invincibility
+              invincible = true;
+              angrySyber.style.opacity = '0.7';
+              playSound(400, 'sine', 0.4, 0.3); // Shield activation sound
+              setTimeout(() => {
+                invincible = false;
+                angrySyber.style.opacity = '1';
+              }, 5000);
+            } else if (powerup.type === '⏰') {
+              // Extra time
+              timeLeft += 10;
+              Timer.textContent = `Time: ${timeLeft}s`;
+              playSound(700, 'sine', 0.3, 0.3); // Clock tick sound
+            } else if (powerup.type === '🌈') {
+              // Rainbow trail
+              rainbowTrail = true;
+              playSound(800, 'sine', 0.5, 0.3); // Magical sound
+              setTimeout(() => {
+                rainbowTrail = false;
+              }, 8000);
+            } else if (powerup.type === '🧲') {
+              // Magnet - attracts fruits
+              magnetActive = true;
+              playSound(500, 'triangle', 0.4, 0.35); // Magnetic sound
+              setTimeout(() => {
+                magnetActive = false;
+              }, 7000);
+            }
+
+            powerup.element.remove();
+            powerups.splice(index, 1);
+          }
+        });
+      }
+
+      function playSound(frequency, type, duration, volume = 0.3) {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscillator.frequency.value = frequency;
+        oscillator.type = type;
+        gainNode.gain.setValueAtTime(volume, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+        oscillator.start(audioCtx.currentTime);
+        oscillator.stop(audioCtx.currentTime + duration);
+      }
+
+      function checkBombCollision() {
+        if (invincible) return;
+
+        const syberRect = angrySyber.getBoundingClientRect();
+
+        bombs.forEach((bomb, index) => {
+          const bombRect = bomb.element.getBoundingClientRect();
+
+          if (
+            syberRect.left < bombRect.right &&
+            syberRect.right > bombRect.left &&
+            syberRect.top < bombRect.bottom &&
+            syberRect.bottom > bombRect.top
+          ) {
+            // Hit bomb - lose 5 points and reset combo
+            score = Math.max(0, score - 5);
+            Score.textContent = `Score: ${score}`;
+            combo = 0;
+            ComboDisplay.style.display = 'none';
+
+            // Explosion effect
+            const containerRect = Container.getBoundingClientRect();
+            const bombScreenX = bombRect.left - containerRect.left;
+            const bombScreenY = bombRect.top - containerRect.top;
+            createParticle(bombScreenX, bombScreenY, '💥');
+            createParticle(bombScreenX + 30, bombScreenY, '💥');
+            createParticle(bombScreenX - 30, bombScreenY, '💥');
+
+            // Play explosion sound
+            playSound(100, 'sawtooth', 0.3, 0.5);
+
+            // Screen shake on bomb hit
+            screenShake();
+
+            // Remove bomb
+            bomb.element.remove();
+            bombs.splice(index, 1);
+          }
+        });
+      }
+
+      function createParticle(x, y, emoji) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.textContent = emoji;
+        particle.style.left = x + 'px';
+        particle.style.top = y + 'px';
+        Container.appendChild(particle);
+        setTimeout(() => particle.remove(), 1000);
+      }
+
       function checkCollision() {
+        if (isStrawberryBeingEaten) return; // Prevent multiple hits
+
         const syberRect = angrySyber.getBoundingClientRect();
         const strawberryRect = Strawberry.getBoundingClientRect();
 
@@ -112,89 +608,495 @@
           syberRect.top < strawberryRect.bottom &&
           syberRect.bottom > strawberryRect.top
         ) {
-          score++;
+          isStrawberryBeingEaten = true;
+          // Increase combo
+          combo++;
+          const points = combo > 1 ? combo : 1;
+          score += points;
           Score.textContent = `Score: ${score}`;
+
+          // Show combo
+          if (combo > 1) {
+            ComboDisplay.style.display = 'block';
+            ComboDisplay.textContent = `Combo x${combo} 🔥`;
+            ComboDisplay.style.fontSize = Math.min(3, 1.5 + combo * 0.2) + 'rem';
+          }
+
+          // Reset combo timer
+          clearTimeout(comboTimer);
+          comboTimer = setTimeout(() => {
+            combo = 0;
+            ComboDisplay.style.display = 'none';
+          }, 3000);
+
+          // Update high score
+          if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('syberHighScore', highScore);
+            HighScore.textContent = `High Score: ${highScore}`;
+
+            // Celebrate new high score!
+            showMessage('NEW HIGH SCORE! 🎉');
+            createFirework(Container.clientWidth / 2, Container.clientHeight / 2);
+            playSound(1000, 'sine', 0.5, 0.4);
+          }
+
+          // Fireworks on milestones
+          if (score >= 50 && lastMilestone < 50) {
+            lastMilestone = 50;
+            createFirework(Container.clientWidth / 2, 100);
+            showMessage(funnyMessages[Math.floor(Math.random() * funnyMessages.length)]);
+          } else if (score >= 100 && lastMilestone < 100) {
+            lastMilestone = 100;
+            createFirework(Container.clientWidth / 2, 100);
+            createFirework(100, Container.clientHeight / 2);
+            showMessage('INCREDIBLE! 💯');
+          } else if (score >= 150 && lastMilestone < 150) {
+            lastMilestone = 150;
+            createFirework(Container.clientWidth / 2, 100);
+            createFirework(100, 100);
+            createFirework(Container.clientWidth - 100, 100);
+            showMessage('LEGENDARY! 👑');
+          }
+
+          // Random encouragement on combos
+          if (combo === 5) {
+            showMessage(funnyMessages[Math.floor(Math.random() * funnyMessages.length)]);
+          }
+
+          // Create celebration particles
+          const containerRect = Container.getBoundingClientRect();
+          const strawX = strawberryRect.left - containerRect.left;
+          const strawY = strawberryRect.top - containerRect.top;
+          createParticle(strawX, strawY, '✨');
+          createParticle(strawX + 20, strawY, '🎉');
+          createParticle(strawX - 20, strawY, '⭐');
+          if (combo > 3) {
+            createParticle(strawX, strawY + 20, '🔥');
+            createParticle(strawX, strawY - 20, '💫');
+          }
+
+          // Play sound effect (higher pitch with combo)
+          playSound(800 + (combo * 100), 'sine', 0.2, 0.3);
 
           console.log(score);
           strawberryHit = true;
           angrySyber.src = "./images/syber2.png";
           angrySyber.style.width = "180px";
-          setTimeout(randomPlace(), 6000);
+
+          // Hide strawberry with fade out
+          Strawberry.classList.add('hidden');
+
+          // Respawn after delay
+          setTimeout(() => {
+            randomPlace();
+            Strawberry.classList.remove('hidden');
+            isStrawberryBeingEaten = false; // Allow next collection
+          }, 400);
+
+          setTimeout(() => {
+            if (gameRunning) {
+              angrySyber.src = "./images/syber1.png";
+              angrySyber.style.width = "150px";
+            }
+          }, 300);
         } else {
           strawberryHit = false;
-          angrySyber.src = "./images/syber1.png";
         }
       }
 
+      function createTrail() {
+        if (frameCount % 3 !== 0) return; // Create trail every 3 frames
+
+        const trail = document.createElement('div');
+        trail.className = 'trail';
+        trail.style.width = '20px';
+        trail.style.height = '20px';
+        trail.style.left = (x + 65) + 'px';
+        trail.style.top = (y + 65) + 'px';
+
+        if (rainbowTrail) {
+          trail.style.background = colors[colorIndex];
+          colorIndex = (colorIndex + 1) % colors.length;
+        } else {
+          trail.style.background = '#ffb3b3';
+        }
+
+        Container.appendChild(trail);
+        setTimeout(() => trail.remove(), 500);
+      }
+
+      function checkObstacleCollision() {
+        const syberRect = angrySyber.getBoundingClientRect();
+
+        obstacles.forEach((obstacle, index) => {
+          const obstacleRect = obstacle.element.getBoundingClientRect();
+
+          if (
+            syberRect.left < obstacleRect.right &&
+            syberRect.right > obstacleRect.left &&
+            syberRect.top < obstacleRect.bottom &&
+            syberRect.bottom > obstacleRect.top
+          ) {
+            // Increment hit counter
+            obstacle.hits++;
+
+            // Calculate bounce direction - push away from obstacle center
+            const obstacleCenterX = obstacleRect.left + obstacleRect.width / 2;
+            const obstacleCenterY = obstacleRect.top + obstacleRect.height / 2;
+            const syberCenterX = syberRect.left + syberRect.width / 2;
+            const syberCenterY = syberRect.top + syberRect.height / 2;
+
+            const pushX = syberCenterX - obstacleCenterX;
+            const pushY = syberCenterY - obstacleCenterY;
+
+            // Normalize and apply strong push
+            const distance = Math.sqrt(pushX * pushX + pushY * pushY);
+            if (distance > 0) {
+              const pushForce = 50;
+              x += (pushX / distance) * pushForce;
+              y += (pushY / distance) * pushForce;
+
+              // Reverse direction
+              directionX = -directionX;
+              directionY = -directionY;
+              flippedX = !flippedX;
+            }
+
+            // Visual feedback based on hits
+            if (obstacle.hits >= 3) {
+              // Rock breaks after 3 hits
+              obstacle.element.style.transform = 'scale(1.5)';
+              obstacle.element.style.opacity = '0';
+
+              // Break particles
+              const containerRect = Container.getBoundingClientRect();
+              const rockX = obstacleRect.left - containerRect.left;
+              const rockY = obstacleRect.top - containerRect.top;
+              createParticle(rockX, rockY, '💥');
+              createParticle(rockX + 20, rockY, '💨');
+              createParticle(rockX - 20, rockY, '💨');
+
+              // Breaking sound
+              playSound(150, 'sawtooth', 0.2, 0.3);
+
+              setTimeout(() => {
+                obstacle.element.remove();
+                obstacles.splice(index, 1);
+
+                // Spawn a new rock after a delay
+                setTimeout(() => {
+                  if (gameRunning) createObstacle();
+                }, 3000);
+              }, 200);
+            } else {
+              // Show damage
+              obstacle.element.style.transform = 'scale(1.2)';
+              obstacle.element.style.filter = `opacity(${1 - (obstacle.hits * 0.25)})`;
+              setTimeout(() => {
+                obstacle.element.style.transform = 'scale(1)';
+              }, 100);
+
+              // Bounce sound (higher pitch as it gets damaged)
+              playSound(200 + (obstacle.hits * 100), 'square', 0.1, 0.2);
+            }
+          }
+        });
+      }
+
+      function updatePosition() {
+        // Magnet effect - pull fruits toward Syber
+        if (magnetActive) {
+          const syberRect = angrySyber.getBoundingClientRect();
+          const strawberryRect = Strawberry.getBoundingClientRect();
+          const containerRect = Container.getBoundingClientRect();
+
+          const strawX = strawberryRect.left - containerRect.left;
+          const strawY = strawberryRect.top - containerRect.top;
+          const syberCenterX = syberRect.left - containerRect.left + 75;
+          const syberCenterY = syberRect.top - containerRect.top + 75;
+
+          const dx = syberCenterX - strawX;
+          const dy = syberCenterY - strawY;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+
+          if (distance > 50) {
+            const pullSpeed = 3;
+            const newStrawX = strawX + (dx / distance) * pullSpeed;
+            const newStrawY = strawY + (dy / distance) * pullSpeed;
+            strawberryXY(newStrawY, newStrawX);
+          }
+
+          // Pull bonus fruits too
+          fruits.forEach(fruit => {
+            const fruitRect = fruit.element.getBoundingClientRect();
+            const fruitX = fruitRect.left - containerRect.left;
+            const fruitY = fruitRect.top - containerRect.top;
+
+            const fdx = syberCenterX - fruitX;
+            const fdy = syberCenterY - fruitY;
+            const fdistance = Math.sqrt(fdx * fdx + fdy * fdy);
+
+            if (fdistance > 50) {
+              const pullSpeed = 2;
+              fruit.element.style.left = (fruitX + (fdx / fdistance) * pullSpeed) + 'px';
+              fruit.element.style.top = (fruitY + (fdy / fdistance) * pullSpeed) + 'px';
+            }
+          });
+        }
+
+        x += directionX;
+        y += directionY;
+
+        // Calculate container bounds
+        const maxX = Container.clientWidth - 150;
+        const maxY = Container.clientHeight - 150;
+
+        // Wraparound logic - teleport to opposite side
+        if (x < 0) x = maxX;
+        if (x > maxX) x = 0;
+        if (y < 0) y = maxY;
+        if (y > maxY) y = 0;
+
+        // Create trail when moving
+        if ((directionX !== 0 || directionY !== 0) && combo > 2) {
+          createTrail();
+        }
+
+        angrySyber.setAttribute(
+          "style",
+          `--x: ${x}px;
+          --y: ${y}px;
+          --flippX: ${flippedX ? "0" : "180deg"};
+          --flippY: ${flippedY}deg;
+          `
+        );
+        checkCollision();
+        checkBombCollision();
+        checkPowerupCollision();
+        checkExtraFruitCollision();
+        checkObstacleCollision();
+
+        frameCount++;
+      }
+
       function handleKeyDown(e) {
-        if (!validKeys.includes(e.key)) return;
+        if (!validKeys.includes(e.key) || !gameRunning) return;
+
+        const currentSpeed = speedBoost ? baseSpeed * 2 : baseSpeed;
+
         switch (e.key) {
           case "ArrowUp":
           case "w":
-            y = y - 1;
+            directionX = 0;
+            directionY = -currentSpeed;
             flippedY = 90;
             break;
           case "ArrowDown":
           case "s":
-            y = y + 1;
+            directionX = 0;
+            directionY = currentSpeed;
             flippedY = -90;
             break;
           case "ArrowLeft":
           case "a":
-            x = x - 1;
+            directionX = -currentSpeed;
+            directionY = 0;
             flippedX = true;
             flippedY = 0;
             break;
           case "ArrowRight":
           case "d":
-            x = x + 1;
+            directionX = currentSpeed;
+            directionY = 0;
             flippedX = false;
             flippedY = 0;
             break;
           //angles
           case "q":
-            y = y - 1;
-            x = x - 1;
+            directionX = -currentSpeed;
+            directionY = -currentSpeed;
             flippedX = true;
             flippedY = 30;
             break;
           case "e":
-            y = y - 1;
-            x = x + 1;
+            directionX = currentSpeed;
+            directionY = -currentSpeed;
             flippedX = false;
             flippedY = 30;
             break;
           case "z":
-            y = y + 1;
-            x = x - 1;
+            directionX = -currentSpeed;
+            directionY = currentSpeed;
             flippedX = true;
             flippedY = -50;
             break;
           case "c":
-            y = y + 1;
-            x = x + 1;
+            directionX = currentSpeed;
+            directionY = currentSpeed;
             flippedX = false;
             flippedY = -50;
             break;
           default:
             break;
         }
-
-        angrySyber.setAttribute(
-          "style",
-          `--x: ${x * speed}px;
-          --y: ${y * speed}px;
-          --flippX: ${flippedX ? "0" : "180deg"};
-          --flippY: ${flippedY}deg;
-          
-          `
-        );
-        checkCollision();
       }
-      // strawberryXY();
+
+      // Timer countdown
+      const gameTimer = setInterval(() => {
+        timeLeft--;
+        Timer.textContent = `Time: ${timeLeft}s`;
+
+        if (timeLeft <= 10) {
+          Timer.style.color = '#ff0000';
+          Timer.style.fontWeight = 'bold';
+        }
+
+        if (timeLeft <= 0) {
+          gameRunning = false;
+          clearInterval(gameTimer);
+
+          // Game over message with child laugh sound
+          const gameOverDiv = document.createElement('div');
+          gameOverDiv.innerHTML = `
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                        background: rgba(255,255,255,0.95); padding: 2rem; border-radius: 1rem;
+                        text-align: center; box-shadow: 0 10px 50px rgba(0,0,0,0.5); z-index: 100;">
+              <h1 style="color: #cf6868; font-family: 'Comic Sans MS', cursive; font-size: 3rem; margin-bottom: 1rem;">
+                Game Over! 🎮
+              </h1>
+              <p style="font-size: 2rem; color: #333; margin: 1rem 0;">
+                Final Score: ${score}
+              </p>
+              <p style="font-size: 1.5rem; color: #666; margin: 1rem 0;">
+                High Score: ${highScore}
+              </p>
+              <button onclick="location.reload()"
+                      style="background: #cf6868; color: white; border: none; padding: 1rem 2rem;
+                             font-size: 1.5rem; border-radius: 0.5rem; cursor: pointer;
+                             font-family: 'Comic Sans MS', cursive; margin-top: 1rem;">
+                Play Again
+              </button>
+            </div>
+          `;
+          Container.appendChild(gameOverDiv);
+
+          // Play child laugh sound effect
+          const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+          // Create multiple oscillators for a laugh-like effect
+          const times = [0, 0.15, 0.3, 0.45, 0.6];
+          times.forEach((time, i) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            // Alternate between two pitches for "ha ha" effect
+            osc.frequency.value = i % 2 === 0 ? 800 : 600;
+            osc.type = 'sine';
+
+            gain.gain.setValueAtTime(0, audioCtx.currentTime + time);
+            gain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + time + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + time + 0.12);
+
+            osc.start(audioCtx.currentTime + time);
+            osc.stop(audioCtx.currentTime + time + 0.12);
+          });
+        }
+      }, 1000);
+
       randomPlace();
 
+      // Create initial obstacles
+      for (let i = 0; i < 1; i++) {
+        createObstacle();
+      }
+
+      // Spawn bombs every 8 seconds (less frequent)
+      setInterval(() => {
+        if (gameRunning && bombs.length < 3) {
+          createBomb();
+        }
+      }, 8000);
+
+      // Spawn powerups every 12 seconds (less frequent)
+      setInterval(() => {
+        if (gameRunning && powerups.length < 2) {
+          createPowerup();
+        }
+      }, 12000);
+
+      // Spawn bonus fruits every 10 seconds (less frequent)
+      setInterval(() => {
+        if (gameRunning && fruits.length < 2) {
+          spawnExtraFruit();
+        }
+      }, 10000);
+
+      // Game loop for smooth continuous movement
+      setInterval(() => {
+        if (gameRunning) {
+          updatePosition();
+        }
+      }, 1000 / 60); // 60 FPS
+
       window.addEventListener("keydown", handleKeyDown);
+
+      // Swipe controls for mobile
+      function handleSwipe() {
+        const diffX = touchEndX - touchStartX;
+        const diffY = touchEndY - touchStartY;
+        const minSwipeDistance = 30;
+
+        if (Math.abs(diffX) < minSwipeDistance && Math.abs(diffY) < minSwipeDistance) {
+          return; // Too short to be a swipe
+        }
+
+        const currentSpeed = speedBoost ? baseSpeed * 2 : baseSpeed;
+
+        // Determine primary direction
+        if (Math.abs(diffX) > Math.abs(diffY)) {
+          // Horizontal swipe
+          if (diffX > 0) {
+            // Swipe right
+            directionX = currentSpeed;
+            directionY = 0;
+            flippedX = false;
+            flippedY = 0;
+          } else {
+            // Swipe left
+            directionX = -currentSpeed;
+            directionY = 0;
+            flippedX = true;
+            flippedY = 0;
+          }
+        } else {
+          // Vertical swipe
+          if (diffY > 0) {
+            // Swipe down
+            directionX = 0;
+            directionY = currentSpeed;
+            flippedY = -90;
+          } else {
+            // Swipe up
+            directionX = 0;
+            directionY = -currentSpeed;
+            flippedY = 90;
+          }
+        }
+      }
+
+      Container.addEventListener('touchstart', (e) => {
+        touchStartX = e.changedTouches[0].screenX;
+        touchStartY = e.changedTouches[0].screenY;
+      }, { passive: true });
+
+      Container.addEventListener('touchend', (e) => {
+        touchEndX = e.changedTouches[0].screenX;
+        touchEndY = e.changedTouches[0].screenY;
+        handleSwipe();
+      }, { passive: true });
     </script>
   </body>
 </html>
